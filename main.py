@@ -14,7 +14,7 @@ from PIL import Image
 import cv2
 cap = cv2.VideoCapture(0)
 
-PATH_OBJECT_DETECTION = "/home/emkurilenko/Documents/models/research/object_detection/"
+PATH_OBJECT_DETECTION = "/home/emkurienko/Documents/object_detection/"
 
 sys.path.append("..")
 sys.path.insert(0, PATH_OBJECT_DETECTION)
