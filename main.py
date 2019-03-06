@@ -6,12 +6,28 @@ import tarfile
 import tensorflow as tf
 import zipfile
 
+import time
+import urllib
+
+
 from collections import defaultdict
 from io import StringIO
 from matplotlib import pyplot as plt
 from PIL import Image
 
 import cv2
+
+# url='http://192.168.0.103:8080/'
+
+# while True:
+#     imgResp=urllib.urlopen(url)
+#     imgNp=np.array(bytearray(imgResp.read()),dtype=np.uint8)
+#     img=cv2.imdecode(imgNp,-1)
+#     cv2.imshow('test',img)
+#     if ord('q')==cv2.waitKey(10):
+#         exit(0)
+
+
 cap = cv2.VideoCapture(0)
 
 PATH_OBJECT_DETECTION = "/home/emkurienko/Documents/object_detection/"
@@ -80,36 +96,42 @@ def load_image_into_numpy_array(image):
 
 
 ## Detection
+with tf.device('/gpu:0'):
+  with detection_graph.as_default():
+    with tf.Session(graph=detection_graph) as sess:
+      while True:
+        ret, image_np = cap.read()
+        start_time = time.time()
+        # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
+        image_np_expanded = np.expand_dims(image_np, axis=0)
+        image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
+        # Each box represents a part of the image where a particular object was detected.
+        boxes = detection_graph.get_tensor_by_name('detection_boxes:0')
+        # Each score represent how level of confidence for each of the objects.
+        # Score is shown on the result image, together with the class label.
+        scores = detection_graph.get_tensor_by_name('detection_scores:0')
+        classes = detection_graph.get_tensor_by_name('detection_classes:0')
+        num_detections = detection_graph.get_tensor_by_name('num_detections:0')
+        # Actual detection.
+        (boxes, scores, classes, num_detections) = sess.run(
+            [boxes, scores, classes, num_detections],
+            feed_dict={image_tensor: image_np_expanded})
+        # Visualization of the results of a detection.
+        vis_util.visualize_boxes_and_labels_on_image_array(
+            image_np,
+            np.squeeze(boxes),
+            np.squeeze(classes).astype(np.int32),
+            np.squeeze(scores),
+            category_index,
+            use_normalized_coordinates=True,
+            line_thickness=8)
+        img_frame = cv2.resize(image_np, (800,600))
+        fps =  1.0 / (time.time() - start_time)
+       
 
-with detection_graph.as_default():
-  with tf.Session(graph=detection_graph) as sess:
-    while True:
-      ret, image_np = cap.read()
-      # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
-      image_np_expanded = np.expand_dims(image_np, axis=0)
-      image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
-      # Each box represents a part of the image where a particular object was detected.
-      boxes = detection_graph.get_tensor_by_name('detection_boxes:0')
-      # Each score represent how level of confidence for each of the objects.
-      # Score is shown on the result image, together with the class label.
-      scores = detection_graph.get_tensor_by_name('detection_scores:0')
-      classes = detection_graph.get_tensor_by_name('detection_classes:0')
-      num_detections = detection_graph.get_tensor_by_name('num_detections:0')
-      # Actual detection.
-      (boxes, scores, classes, num_detections) = sess.run(
-          [boxes, scores, classes, num_detections],
-          feed_dict={image_tensor: image_np_expanded})
-      # Visualization of the results of a detection.
-      vis_util.visualize_boxes_and_labels_on_image_array(
-          image_np,
-          np.squeeze(boxes),
-          np.squeeze(classes).astype(np.int32),
-          np.squeeze(scores),
-          category_index,
-          use_normalized_coordinates=True,
-          line_thickness=8)
-
-      cv2.imshow('object detection', cv2.resize(image_np, (800,600)))
-      if cv2.waitKey(25) & 0xFF == ord('q'):
-        cv2.destroyAllWindows()
-        break
+        cv2.putText(img_frame,str(fps),(10,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (200,0,0), 3, cv2.LINE_AA)
+        cv2.imshow('object detection', img_frame)
+        print("FPS: ", fps)
+        if cv2.waitKey(25) & 0xFF == ord('q'):
+          cv2.destroyAllWindows()
+          break
