@@ -17,18 +17,9 @@ from PIL import Image
 
 import cv2
 
-# url='http://192.168.0.103:8080/'
+#cap = cv2.VideoCapture(0)
 
-# while True:
-#     imgResp=urllib.urlopen(url)
-#     imgNp=np.array(bytearray(imgResp.read()),dtype=np.uint8)
-#     img=cv2.imdecode(imgNp,-1)
-#     cv2.imshow('test',img)
-#     if ord('q')==cv2.waitKey(10):
-#         exit(0)
-
-
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture("/home/emkurienko/Videos/4.mp4")
 
 PATH_OBJECT_DETECTION = "/home/emkurienko/Documents/object_detection/"
 
@@ -85,16 +76,6 @@ label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
 categories = label_map_util.convert_label_map_to_categories(label_map, max_num_classes=NUM_CLASSES, use_display_name=True)
 category_index = label_map_util.create_category_index(categories)
 
-
-# ## Helper code
-
-
-def load_image_into_numpy_array(image):
-  (im_width, im_height) = image.size
-  return np.array(image.getdata()).reshape(
-      (im_height, im_width, 3)).astype(np.uint8)
-
-
 ## Detection
 with tf.device('/gpu:0'):
   with detection_graph.as_default():
@@ -124,14 +105,12 @@ with tf.device('/gpu:0'):
             np.squeeze(scores),
             category_index,
             use_normalized_coordinates=True,
-            line_thickness=8)
-        img_frame = cv2.resize(image_np, (800,600))
+            line_thickness=5)
+        image_np = cv2.resize(image_np, (800,600))
         fps =  1.0 / (time.time() - start_time)
-       
 
-        cv2.putText(img_frame,str(fps),(10,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (200,0,0), 3, cv2.LINE_AA)
-        cv2.imshow('object detection', img_frame)
-        print("FPS: ", fps)
+        cv2.putText(image_np, "{:10.4f}".format(fps),(10,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (200,0,0), 3, cv2.LINE_AA)
+        cv2.imshow('object detection', image_np)
         if cv2.waitKey(25) & 0xFF == ord('q'):
           cv2.destroyAllWindows()
           break
